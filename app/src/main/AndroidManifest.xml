@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    API moderna de Xposed (101). Se quitaron los meta-data viejos (xposedmodule,
+    xposedscope...): si se dejan, LSPosed/Vector puede tratar el módulo como antiguo
+    y usar el ámbito viejo "android" en vez de "system" (Marco del sistema).
+    El módulo se declara en src/main/resources/META-INF/xposed/.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:description="@string/module_desc"
+        android:icon="@drawable/ic_launcher_pip"
+        android:label="@string/module_name" />
+</manifest>
