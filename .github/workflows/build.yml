@@ -1,17 +1,76 @@
-name: Build APK
-on: [push]
+name: Build y Release
+
+# Se ejecuta cada vez que subes un cambio a main, o a mano desde la pestaña Actions
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # necesario para crear la Release
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
-      - run: chmod +x gradlew
-      - run: ./gradlew assembleRelease
+
+      # Lee la versión de app/build.gradle.kts (versionName = "2.0.1")
+      - name: Leer versión
+        id: version
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versión: $VERSION"
+
+      # La llave de firma vive en los Secrets de GitHub, nunca en el código
+      - name: Preparar llave de firma
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Falta el secret KEYSTORE_BASE64. Sin él cada APK sale con una firma distinta y no se puede actualizar encima."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.jks
+
+      - name: Compilar APK
+        env:
+          storePassword: ${{ secrets.STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          keyAlias: ${{ secrets.KEY_ALIAS }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          mkdir -p salida
+          cp app/build/outputs/apk/release/*.apk "salida/PokeGOPiP-${{ steps.version.outputs.version }}.apk"
+
+      # Copia del APK en la ejecución de Actions (por si quieres bajarlo sin Release)
       - uses: actions/upload-artifact@v4
         with:
-          name: apk
-          path: app/build/outputs/apk/release/*.apk
+          name: PokeGOPiP-${{ steps.version.outputs.version }}
+          path: salida/*.apk
+
+      # Publica la Release solo si esa versión todavía no existe.
+      # Si subes un cambio sin cambiar versionName (por ejemplo el README), no se repite.
+      - name: Publicar Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          TAG="v$VERSION"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "La Release $TAG ya existe; no se publica de nuevo. Sube versionName para sacar otra."
+            exit 0
+          fi
+          NOTAS=$(awk '/^# /{n++} n==1' CAMBIOS.md 2>/dev/null || true)
+          [ -z "$NOTAS" ] && NOTAS="PokeGO PiP $VERSION"
+          gh release create "$TAG" salida/*.apk \
+            --title "PokeGO PiP $VERSION" \
+            --notes "$NOTAS" \
+            --target "$GITHUB_SHA"
