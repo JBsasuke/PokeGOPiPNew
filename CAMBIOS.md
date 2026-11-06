@@ -1,3 +1,19 @@
+# PokeGO PiP 2.1.0 — Digimon UP
+
+- Ahora también pone en ventana flotante **DIGIMON UP** (`com.bandainamcoent.dgup_ww`).
+- El ámbito (`scope.list`) ya incluye Digimon UP; Android acepta su PiP igual que el de Pokémon GO.
+- Si un juego no deja ver su reproductor de Unity, el módulo usa la pantalla principal del juego.
+- El registro de diagnóstico de Digimon UP queda en `Android/data/com.bandainamcoent.dgup_ww/files/PokeGOPiP-debug.log`.
+
+## Activarlo
+
+1. Instala el APK nuevo encima.
+2. En LSPosed/Vector abre el módulo y marca **DIGIMON UP** (además de Marco del sistema y Pokémon GO).
+3. **Reinicia el teléfono** (el Marco del sistema solo toma el cambio al reiniciar).
+4. Abre Digimon UP y pulsa Inicio: debe quedar en ventana flotante.
+
+---
+
 # PokeGO PiP 2.0.1 — arreglo de la ventana flotante (API 101)
 
 El registro mostraba que el módulo detectaba la salida del juego ("onUserLeaveHint")

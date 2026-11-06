@@ -27,10 +27,10 @@ class Main : XposedModule() {
         HookAndroid(this).handleLoadPackage()
     }
 
-    // Pokémon GO: solo el proceso principal del juego
+    // Pokémon GO o Digimon UP: solo el proceso principal del juego
     override fun onPackageLoaded(param: PackageLoadedParam) {
         if (!param.isFirstPackage) return
-        if (param.packageName in POKEGO_PACKAGES && processName == param.packageName) {
+        if (param.packageName in GAME_PACKAGES && processName == param.packageName) {
             HookPokeGO(this).handleLoadPackage(param)
         }
     }

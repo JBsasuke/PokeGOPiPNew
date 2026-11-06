@@ -5,7 +5,7 @@ import android.util.Log
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 
-/** En system_server: hace que Android diga que Pokémon GO admite PiP. */
+/** En system_server: hace que Android diga que Pokémon GO (y los otros juegos) admiten PiP. */
 class HookAndroid(private val module: XposedModule) {
     fun handleLoadPackage() {
         try {
@@ -17,7 +17,7 @@ class HookAndroid(private val module: XposedModule) {
                 module.hook(method).intercept(object : XposedInterface.Hooker {
                     override fun intercept(chain: XposedInterface.Chain): Any? {
                         val info = chain.thisObject as? ActivityInfo
-                        return if (info != null && info.packageName in POKEGO_PACKAGES) true
+                        return if (info != null && info.packageName in GAME_PACKAGES) true
                         else chain.proceed()
                     }
                 })

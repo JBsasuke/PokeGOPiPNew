@@ -15,6 +15,17 @@ val POKEGO_PACKAGES = setOf(
 )
 
 /**
+ * Otros juegos con ventana flotante.
+ * - com.bandainamcoent.dgup_ww : DIGIMON UP (Bandai Namco, versión mundial)
+ */
+val OTHER_GAME_PACKAGES = setOf(
+    "com.bandainamcoent.dgup_ww"
+)
+
+/** Todos los juegos que el módulo pone en ventana flotante. */
+val GAME_PACKAGES = POKEGO_PACKAGES + OTHER_GAME_PACKAGES
+
+/**
  * Textos de los botones de la ventana flotante.
  *
  * Arreglo: antes se leían con getModuleRes(), que abría el APK de POKÉMON GO

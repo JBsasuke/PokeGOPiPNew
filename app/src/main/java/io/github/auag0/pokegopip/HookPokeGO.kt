@@ -33,6 +33,7 @@ class HookPokeGO(private val module: XposedModule) {
         private const val ACTION_TOGGLE_STARTUP_MODE = "ACTION_START_UP_BLACK_SCREEN"
         private const val UNITY_MAIN_ACTIVITY =
             "com.nianticproject.holoholo.libholoholo.unity.UnityMainActivity"
+        private val GAME_ACTIVITY_NAMES = Regex("Unity|GameActivity|Cocos2dx|Godot", RegexOption.IGNORE_CASE)
         private const val MIN_PIP_RATIO = 100.0 / 239.0
         private const val MAX_PIP_RATIO = 239.0 / 100.0
 
@@ -42,7 +43,7 @@ class HookPokeGO(private val module: XposedModule) {
     }
 
     fun handleLoadPackage(param: PackageLoadedParam) {
-        Log.i(TAG, "started pokemon go (${param.packageName})")
+        Log.i(TAG, "started game (${param.packageName})")
         unityMainActivityClass = runCatching {
             param.defaultClassLoader.loadClass(UNITY_MAIN_ACTIVITY)
         }.getOrNull()
@@ -159,7 +160,15 @@ class HookPokeGO(private val module: XposedModule) {
 
         fun isGameActivity(activity: Activity): Boolean {
             unityMainActivityClass?.let { return it.isInstance(activity) }
-            return findUnityPlayerField(activity.javaClass) != null
+            if (findUnityPlayerField(activity.javaClass) != null) return true
+            // Otros juegos (Digimon UP…): si no se ve el reproductor de Unity, se usa la pantalla
+            // principal del juego (la que abre el ícono) o una actividad de juego conocida
+            if (activity.packageName in POKEGO_PACKAGES) return false
+            val nombre = activity.javaClass.name
+            if (GAME_ACTIVITY_NAMES.containsMatchIn(nombre)) return true
+            return runCatching {
+                activity.packageManager.getLaunchIntentForPackage(activity.packageName)?.component?.className == nombre
+            }.getOrDefault(false)
         }
 
         fun findUnityPlayerField(start: Class<*>): Field? {
