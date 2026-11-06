@@ -17,15 +17,12 @@ val POKEGO_PACKAGES = setOf(
 /**
  * Otros juegos con ventana flotante.
  * - com.bandainamcoent.dgup_ww   : DIGIMON UP (Bandai Namco, versión mundial)
- * - com.supercell.clashofclans   : Clash of Clans (Supercell)
- * - com.supercell.clashroyale    : Clash Royale (Supercell)
- * - com.supercell.hayday         : Hay Day (Supercell)
+ *
+ * Los juegos de Supercell (Clash of Clans, Clash Royale, Hay Day) NO: su protección contra trampas
+ * detecta el módulo dentro del juego y lo cierra. Para esos, la vista emergente de Samsung.
  */
 val OTHER_GAME_PACKAGES = setOf(
-    "com.bandainamcoent.dgup_ww",
-    "com.supercell.clashofclans",
-    "com.supercell.clashroyale",
-    "com.supercell.hayday"
+    "com.bandainamcoent.dgup_ww"
 )
 
 /** Todos los juegos que el módulo pone en ventana flotante. */

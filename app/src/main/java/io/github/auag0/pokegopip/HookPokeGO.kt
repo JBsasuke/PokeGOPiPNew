@@ -420,20 +420,18 @@ class HookPokeGO(private val module: XposedModule) {
             val app = activity.applicationContext
             val wm = app.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
             val dm = app.resources.displayMetrics
-            // Como la vista emergente minimizada de Samsung: el ícono del juego en un cuadrito
-            // de esquinas redondeadas con borde blanco y sombra
+            // Como la vista emergente minimizada de Samsung: solo el ícono del juego, tal cual,
+            // sin borde ni fondo (con una sombrita para que se vea sobre cualquier pantalla)
             val size = (64 * dm.density).toInt()
-            val borde = (3 * dm.density).toInt()
             val icon = android.widget.ImageView(app).apply {
                 setImageDrawable(runCatching { app.packageManager.getApplicationIcon(app.packageName) }.getOrNull())
                 scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
-                setPadding(borde, borde, borde, borde)
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = size * 0.3f; setColor(0xFFFFFFFF.toInt())
+                outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: android.graphics.Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, view.width * 0.3f)
+                    }
                 }
-                clipToOutline = true
-                outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-                elevation = 10 * dm.density
+                elevation = 6 * dm.density
                 contentDescription = Texts.minimize
             }
             val lp = android.view.WindowManager.LayoutParams(

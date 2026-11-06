@@ -1,3 +1,12 @@
+# PokeGO PiP 2.3.2
+
+- **Se quitaron Clash of Clans, Clash Royale y Hay Day:** su protección contra trampas detecta el
+  módulo y cierra el juego. Para esos, usa la vista emergente de Samsung. Quedan Pokémon GO y Digimon UP.
+- **El ícono al minimizar ya no lleva borde blanco:** sale solo el ícono del juego, como en Samsung.
+- Se mantiene el permiso automático del ícono (sin adb ni Termux).
+
+---
+
 # PokeGO PiP 2.3.1 — arreglo para Clash of Clans y los juegos de Supercell
 
 - El registro mostraba que el módulo veía abrir Clash of Clans pero nunca se enteraba de que salías
