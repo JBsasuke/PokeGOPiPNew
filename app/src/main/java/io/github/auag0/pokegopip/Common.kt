@@ -56,4 +56,24 @@ object Texts {
         get() = pick("La pantalla se mostrará al iniciar", "Screen will be shown on startup", "起動時に画面を表示します")
     val startupHidden
         get() = pick("La pantalla se ocultará al iniciar", "Screen will be hidden on startup", "起動時に画面を非表示にします")
+    val minimize
+        get() = pick("Minimizar a ícono", "Minimize to icon", "アイコンに最小化")
+    val minimizeDesc
+        get() = pick(
+            "Esconde la ventana y deja un ícono flotante; el juego sigue abierto",
+            "Hide the window and leave a floating icon; the game stays open",
+            "ウィンドウを隠してフローティングアイコンを表示します"
+        )
+    val bubbleHint
+        get() = pick(
+            "Toca el ícono para volver · déjalo presionado para quitarlo",
+            "Tap the icon to come back · long-press to remove it",
+            "タップで戻る・長押しで消す"
+        )
+    val overlayMissing
+        get() = pick(
+            "Sin permiso para el ícono flotante: el juego sigue en Recientes. Actívalo con: appops set <paquete> SYSTEM_ALERT_WINDOW allow",
+            "No permission for the floating icon: the game is still in Recents. Enable it with: appops set <package> SYSTEM_ALERT_WINDOW allow",
+            "フローティングアイコンの権限がありません"
+        )
 }

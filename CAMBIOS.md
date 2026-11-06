@@ -1,3 +1,24 @@
+# PokeGO PiP 2.2.0 — minimizar a ícono
+
+- Nuevo botón en la ventana flotante: **Minimizar a ícono**. Esconde la ventana y deja un ícono
+  flotante con el logo del juego en un cuadrito redondeado con borde blanco, igual que la vista
+  emergente minimizada de Samsung. El juego sigue abierto.
+  - **Tocar** el ícono: vuelve el juego en ventana flotante.
+  - **Arrastrar**: lo mueves; al soltarlo se pega al borde.
+  - **Dejarlo presionado**: quita el ícono (el juego sigue en Recientes).
+- El ícono necesita que el juego pueda "mostrarse sobre otras apps". Se da una sola vez por juego,
+  con la computadora (adb) o con root en Termux:
+
+```
+adb shell appops set com.bandainamcoent.dgup_ww SYSTEM_ALERT_WINDOW allow
+adb shell appops set com.nianticlabs.pokemongo SYSTEM_ALERT_WINDOW allow
+```
+  (en Termux con root: `su -c appops set com.bandainamcoent.dgup_ww SYSTEM_ALERT_WINDOW allow`)
+
+  Sin ese permiso, el botón igual esconde el juego (queda en Recientes) y avisa qué falta.
+
+---
+
 # PokeGO PiP 2.1.0 — Digimon UP
 
 - Ahora también pone en ventana flotante **DIGIMON UP** (`com.bandainamcoent.dgup_ww`).

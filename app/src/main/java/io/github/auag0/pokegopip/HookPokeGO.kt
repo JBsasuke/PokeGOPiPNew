@@ -31,6 +31,11 @@ class HookPokeGO(private val module: XposedModule) {
     companion object {
         private const val ACTION_TOGGLE_BLACK_SCREEN = "ACTION_PIP_BLACK_SCREEN"
         private const val ACTION_TOGGLE_STARTUP_MODE = "ACTION_START_UP_BLACK_SCREEN"
+        private const val ACTION_MINIMIZE = "ACTION_PIP_MINIMIZE"
+
+        // Ícono flotante (al minimizar): uno solo a la vez
+        @Volatile private var bubble: View? = null
+        @Volatile private var bubbleWm: android.view.WindowManager? = null
         private const val UNITY_MAIN_ACTIVITY =
             "com.nianticproject.holoholo.libholoholo.unity.UnityMainActivity"
         private val GAME_ACTIVITY_NAMES = Regex("Unity|GameActivity|Cocos2dx|Godot", RegexOption.IGNORE_CASE)
@@ -242,6 +247,7 @@ class HookPokeGO(private val module: XposedModule) {
                                     if (playerView.visibility == View.VISIBLE) View.INVISIBLE
                                     else View.VISIBLE
                             }
+                            ACTION_MINIMIZE -> minimizeToIcon(activity)
                             ACTION_TOGGLE_STARTUP_MODE -> {
                                 val newStartUp = !prefs.getBoolean("start_up", false)
                                 prefs.edit().putBoolean("start_up", newStartUp).apply()
@@ -255,6 +261,7 @@ class HookPokeGO(private val module: XposedModule) {
             val filter = IntentFilter().apply {
                 addAction(ACTION_TOGGLE_BLACK_SCREEN)
                 addAction(ACTION_TOGGLE_STARTUP_MODE)
+                addAction(ACTION_MINIMIZE)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 activity.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -307,6 +314,7 @@ class HookPokeGO(private val module: XposedModule) {
 
         fun handleOnDestroy(activity: Activity) {
             Log.i(TAG, "onDestroy")
+            if (activity.isFinishing) removeBubble()
             val receiver = receivers.remove(activity) ?: return
             try {
                 activity.unregisterReceiver(receiver)
@@ -340,6 +348,16 @@ class HookPokeGO(private val module: XposedModule) {
                     )
                 ),
                 RemoteAction(
+                    Icon.createWithResource(activity, android.R.drawable.arrow_down_float),
+                    Texts.minimize,
+                    Texts.minimizeDesc,
+                    PendingIntent.getBroadcast(
+                        activity, 2,
+                        Intent(ACTION_MINIMIZE).setPackage(activity.packageName),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                ),
+                RemoteAction(
                     Icon.createWithResource(activity, android.R.drawable.ic_popup_sync),
                     Texts.toggleStartup,
                     Texts.toggleStartupDesc,
@@ -350,6 +368,110 @@ class HookPokeGO(private val module: XposedModule) {
                     )
                 )
             )
+        }
+
+        // ---------- Minimizar a ícono (como la vista emergente de Samsung) ----------
+        // Esconde el juego (sigue abierto en Recientes) y deja un ícono flotante con el logo del juego.
+        // Tocar el ícono lo trae de vuelta en ventana flotante; dejarlo presionado quita el ícono.
+        // El ícono necesita el permiso "mostrar sobre otras apps" para el juego:
+        //   adb shell appops set <paquete> SYSTEM_ALERT_WINDOW allow   (o con su en Termux)
+        fun minimizeToIcon(activity: Activity) {
+            PipFileLog.write("minimize to icon")
+            val canDraw = runCatching { android.provider.Settings.canDrawOverlays(activity) }.getOrDefault(false)
+            if (canDraw) runSafely("bubble") { showBubble(activity) }
+            else {
+                PipFileLog.write("minimize: no SYSTEM_ALERT_WINDOW permission")
+                showToast(activity, Texts.overlayMissing.replace("<paquete>", activity.packageName).replace("<package>", activity.packageName))
+            }
+            activity.moveTaskToBack(true)
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        fun showBubble(activity: Activity) {
+            removeBubble()
+            val app = activity.applicationContext
+            val wm = app.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+            val dm = app.resources.displayMetrics
+            // Como la vista emergente minimizada de Samsung: el ícono del juego en un cuadrito
+            // de esquinas redondeadas con borde blanco y sombra
+            val size = (64 * dm.density).toInt()
+            val borde = (3 * dm.density).toInt()
+            val icon = android.widget.ImageView(app).apply {
+                setImageDrawable(runCatching { app.packageManager.getApplicationIcon(app.packageName) }.getOrNull())
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                setPadding(borde, borde, borde, borde)
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = size * 0.3f; setColor(0xFFFFFFFF.toInt())
+                }
+                clipToOutline = true
+                outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+                elevation = 10 * dm.density
+                contentDescription = Texts.minimize
+            }
+            val lp = android.view.WindowManager.LayoutParams(
+                size, size,
+                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                android.graphics.PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = android.view.Gravity.TOP or android.view.Gravity.START
+                x = dm.widthPixels - size - (8 * dm.density).toInt()
+                y = (dm.heightPixels * 0.3).toInt()
+            }
+            val activityRef = WeakReference(activity)
+            val handler = Handler(app.mainLooper)
+            var downX = 0f; var downY = 0f; var startX = 0; var startY = 0; var moved = false
+            val longPress = Runnable { removeBubble() }
+            icon.setOnTouchListener { v, e ->
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        downX = e.rawX; downY = e.rawY; startX = lp.x; startY = lp.y; moved = false
+                        handler.postDelayed(longPress, 700)
+                    }
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        val dx = e.rawX - downX; val dy = e.rawY - downY
+                        if (!moved && (Math.abs(dx) > 12 * dm.density || Math.abs(dy) > 12 * dm.density)) { moved = true; handler.removeCallbacks(longPress) }
+                        if (moved) { lp.x = startX + dx.toInt(); lp.y = startY + dy.toInt(); runCatching { wm.updateViewLayout(v, lp) } }
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        handler.removeCallbacks(longPress)
+                        if (moved) {
+                            // se pega al borde más cercano
+                            lp.x = if (lp.x + size / 2 < dm.widthPixels / 2) (8 * dm.density).toInt() else dm.widthPixels - size - (8 * dm.density).toInt()
+                            runCatching { wm.updateViewLayout(v, lp) }
+                        } else if (bubble === v) {
+                            removeBubble()
+                            restoreFromIcon(app, activityRef, handler)
+                        }
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> handler.removeCallbacks(longPress)
+                }
+                true
+            }
+            wm.addView(icon, lp)
+            bubble = icon; bubbleWm = wm
+            showToast(app, Texts.bubbleHint)
+            PipFileLog.write("bubble shown")
+        }
+
+        fun removeBubble() {
+            val v = bubble ?: return
+            bubble = null
+            runCatching { bubbleWm?.removeView(v) }
+            bubbleWm = null
+        }
+
+        // Trae el juego al frente (como tocar su ícono) y lo vuelve a poner en ventana flotante
+        fun restoreFromIcon(app: Context, activityRef: WeakReference<Activity>, handler: Handler) {
+            PipFileLog.write("restore from icon")
+            val launch = app.packageManager.getLaunchIntentForPackage(app.packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            }
+            runCatching { if (launch != null) app.startActivity(launch) }
+                .onFailure { PipFileLog.write("ERROR restore: ${it.javaClass.simpleName}: ${it.message}") }
+            handler.postDelayed({
+                activityRef.get()?.let { a -> runSafely("re-enter PiP") { handleOnUserLeaveHint(a) } }
+            }, 800)
         }
 
         fun showToast(context: Context, msg: String) {
