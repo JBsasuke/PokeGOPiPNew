@@ -1,3 +1,19 @@
+# PokeGO PiP 2.3.0 — juegos de Supercell y permiso del ícono automático
+
+- Ahora también pone en ventana flotante **Clash of Clans** (`com.supercell.clashofclans`),
+  **Clash Royale** (`com.supercell.clashroyale`) y **Hay Day** (`com.supercell.hayday`).
+- **El permiso del ícono flotante ya no hace falta darlo con adb ni Termux:** el módulo se lo da
+  solo a los juegos desde el Marco del sistema (al reiniciar el teléfono).
+- Al tocar el ícono, el juego se abre antes de quitar el ícono, para que Android no lo bloquee.
+
+## Activarlo
+
+1. Instala el APK nuevo encima.
+2. En LSPosed/Vector, en el módulo marca **Clash of Clans, Clash Royale y Hay Day** (además de Marco del sistema, Pokémon GO y Digimon UP).
+3. **Reinicia el teléfono.**
+
+---
+
 # PokeGO PiP 2.2.0 — minimizar a ícono
 
 - Nuevo botón en la ventana flotante: **Minimizar a ícono**. Esconde la ventana y deja un ícono

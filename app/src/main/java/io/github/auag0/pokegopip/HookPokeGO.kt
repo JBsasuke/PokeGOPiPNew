@@ -373,16 +373,17 @@ class HookPokeGO(private val module: XposedModule) {
         // ---------- Minimizar a ícono (como la vista emergente de Samsung) ----------
         // Esconde el juego (sigue abierto en Recientes) y deja un ícono flotante con el logo del juego.
         // Tocar el ícono lo trae de vuelta en ventana flotante; dejarlo presionado quita el ícono.
-        // El ícono necesita el permiso "mostrar sobre otras apps" para el juego:
-        //   adb shell appops set <paquete> SYSTEM_ALERT_WINDOW allow   (o con su en Termux)
+        // El ícono necesita el permiso "mostrar sobre otras apps" para el juego
+        //   (lo da el módulo solo desde el Marco del sistema; ya no hace falta adb ni Termux)
         fun minimizeToIcon(activity: Activity) {
             PipFileLog.write("minimize to icon")
-            val canDraw = runCatching { android.provider.Settings.canDrawOverlays(activity) }.getOrDefault(false)
-            if (canDraw) runSafely("bubble") { showBubble(activity) }
-            else {
-                PipFileLog.write("minimize: no SYSTEM_ALERT_WINDOW permission")
-                showToast(activity, Texts.overlayMissing.replace("<paquete>", activity.packageName).replace("<package>", activity.packageName))
+            // El permiso del ícono lo da el módulo desde el Marco del sistema (HookAndroid), así que
+            // no se pregunta a Settings.canDrawOverlays (diría que no): se intenta poner el ícono y ya
+            val ok = try { showBubble(activity); true } catch (t: Throwable) {
+                PipFileLog.write("minimize: bubble failed: ${t.javaClass.simpleName}: ${t.message}")
+                false
             }
+            if (!ok) showToast(activity, Texts.overlayMissing)
             activity.moveTaskToBack(true)
         }
 
@@ -440,8 +441,8 @@ class HookPokeGO(private val module: XposedModule) {
                             lp.x = if (lp.x + size / 2 < dm.widthPixels / 2) (8 * dm.density).toInt() else dm.widthPixels - size - (8 * dm.density).toInt()
                             runCatching { wm.updateViewLayout(v, lp) }
                         } else if (bubble === v) {
-                            removeBubble()
                             restoreFromIcon(app, activityRef, handler)
+                            handler.postDelayed({ removeBubble() }, 300)
                         }
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> handler.removeCallbacks(longPress)

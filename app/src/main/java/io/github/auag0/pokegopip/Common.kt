@@ -16,10 +16,16 @@ val POKEGO_PACKAGES = setOf(
 
 /**
  * Otros juegos con ventana flotante.
- * - com.bandainamcoent.dgup_ww : DIGIMON UP (Bandai Namco, versión mundial)
+ * - com.bandainamcoent.dgup_ww   : DIGIMON UP (Bandai Namco, versión mundial)
+ * - com.supercell.clashofclans   : Clash of Clans (Supercell)
+ * - com.supercell.clashroyale    : Clash Royale (Supercell)
+ * - com.supercell.hayday         : Hay Day (Supercell)
  */
 val OTHER_GAME_PACKAGES = setOf(
-    "com.bandainamcoent.dgup_ww"
+    "com.bandainamcoent.dgup_ww",
+    "com.supercell.clashofclans",
+    "com.supercell.clashroyale",
+    "com.supercell.hayday"
 )
 
 /** Todos los juegos que el módulo pone en ventana flotante. */
@@ -72,8 +78,8 @@ object Texts {
         )
     val overlayMissing
         get() = pick(
-            "Sin permiso para el ícono flotante: el juego sigue en Recientes. Actívalo con: appops set <paquete> SYSTEM_ALERT_WINDOW allow",
-            "No permission for the floating icon: the game is still in Recents. Enable it with: appops set <package> SYSTEM_ALERT_WINDOW allow",
+            "No se pudo mostrar el ícono flotante: el juego sigue en Recientes. Revisa que el Marco del sistema esté marcado en el módulo y reinicia",
+            "Could not show the floating icon: the game is still in Recents. Check that System Framework is enabled for the module and reboot",
             "フローティングアイコンの権限がありません"
         )
 }

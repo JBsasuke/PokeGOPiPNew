@@ -24,7 +24,7 @@ class Main : XposedModule() {
 
     // Marco del sistema: hace que Android acepte PiP para Pokémon GO
     override fun onSystemServerStarting(param: SystemServerStartingParam) {
-        HookAndroid(this).handleLoadPackage()
+        HookAndroid(this).handleLoadPackage(param.classLoader)
     }
 
     // Pokémon GO o Digimon UP: solo el proceso principal del juego
