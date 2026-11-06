@@ -1,3 +1,12 @@
+# PokeGO PiP 2.3.1 — arreglo para Clash of Clans y los juegos de Supercell
+
+- El registro mostraba que el módulo veía abrir Clash of Clans pero nunca se enteraba de que salías
+  con Inicio: esos juegos reemplazan `onUserLeaveHint` sin avisar a Android. Ahora el módulo
+  engancha también `performUserLeaving`, que Android llama siempre al salir con Inicio.
+- No se pide la ventana flotante dos veces seguidas aunque lleguen los dos avisos.
+
+---
+
 # PokeGO PiP 2.3.0 — juegos de Supercell y permiso del ícono automático
 
 - Ahora también pone en ventana flotante **Clash of Clans** (`com.supercell.clashofclans`),

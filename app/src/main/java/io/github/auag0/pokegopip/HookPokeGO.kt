@@ -43,6 +43,8 @@ class HookPokeGO(private val module: XposedModule) {
         private const val MAX_PIP_RATIO = 239.0 / 100.0
 
         private val receivers = WeakHashMap<Activity, BroadcastReceiver>()
+        // Para no pedir el PiP dos veces seguidas (lo pueden llamar dos ganchos a la vez)
+        private val lastPipRequest = WeakHashMap<Activity, Long>()
         @Volatile private var toast: Toast? = null
         @Volatile private var unityMainActivityClass: Class<*>? = null
     }
@@ -107,6 +109,28 @@ class HookPokeGO(private val module: XposedModule) {
         } else {
             Log.e(TAG, "onUserLeaveHint method not found")
         }
+
+        // Juegos que reemplazan onUserLeaveHint sin llamar al de Android (Clash of Clans, Supercell…):
+        // ese gancho nunca llega. performUserLeaving es lo que Android llama siempre al salir con
+        // Inicio, antes de onUserLeaveHint, así que se engancha también.
+        Activity::class.java.declaredMethods.firstOrNull {
+            it.name == "performUserLeaving" && it.parameterTypes.isEmpty()
+        }?.let { method ->
+            runCatching {
+                module.hook(method).intercept(object : XposedInterface.Hooker {
+                    override fun intercept(chain: XposedInterface.Chain): Any? {
+                        val activity = chain.thisObject as? Activity
+                        if (activity != null && isGameActivity(activity) &&
+                            !activity.isFinishing && !activity.isInPictureInPictureMode) {
+                            PipFileLog.write("performUserLeaving reached: ${activity.javaClass.name}")
+                            runSafely("performUserLeaving") { handleOnUserLeaveHint(activity) }
+                        }
+                        return chain.proceed()
+                    }
+                })
+                Log.i(TAG, "hooked performUserLeaving")
+            }.onFailure { Log.e(TAG, "failed to hook performUserLeaving", it) }
+        } ?: Log.w(TAG, "performUserLeaving not found")
 
         // Keep Back from finishing the game when PiP can be entered. Hook the
         // concrete Unity override if present, otherwise use Activity's method.
@@ -274,6 +298,9 @@ class HookPokeGO(private val module: XposedModule) {
 
         fun handleOnUserLeaveHint(activity: Activity) {
             if (activity.isInPictureInPictureMode || activity.isFinishing) return
+            val ahora = System.currentTimeMillis()
+            if (ahora - (lastPipRequest[activity] ?: 0L) < 1500) return
+            lastPipRequest[activity] = ahora
             PipFileLog.attach(activity)
             PipFileLog.write("onUserLeaveHint")
 
